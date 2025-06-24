@@ -40,6 +40,7 @@ Shader "DecalMapping"
 		float3 _DecalTangent;
 		float4 _Color;
 		float3 _ObjectScale;
+		float _ProjectionDepth;
 		CBUFFER_END
 		ENDHLSL
 
@@ -120,6 +121,24 @@ Shader "DecalMapping"
 				
 				// 5. 累積テクスチャに重ねて描画する
 				const half4 acc = SAMPLE_TEXTURE2D(_AccumulateTexture, sampler_AccumulateTexture, input.texcoord);
+
+				if (sameDirectionMask == 0 || decalAreaMask == 0)
+				{
+					return acc;
+				}
+
+				float3 direction = (input.positionOS - _DecalPositionOS);
+
+				if (length(direction) > _ProjectionDepth)
+				{
+					return acc;
+				}
+
+				if (dot(normalize(direction), decalNormal) >= 0)
+				{
+					return acc;
+				}
+
 				return half4(lerp(acc.xyz, decalColor.xyz, decalColor.w), acc.w);
 			}
 			ENDHLSL

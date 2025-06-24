@@ -14,6 +14,7 @@ public class DecalPainter : IDisposable
     static readonly int _decalSizeNameID = Shader.PropertyToID("_DecalSize");
     static readonly int _decalNormalNameID = Shader.PropertyToID("_DecalNormal");
     static readonly int _decalTangentNameID = Shader.PropertyToID("_DecalTangent");
+    static readonly int _projectionDepthID = Shader.PropertyToID("_ProjectionDepth");
     static readonly int _colorNameID = Shader.PropertyToID("_Color");
     static readonly int _objectScaleNameID = Shader.PropertyToID("_ObjectScale");
 
@@ -113,6 +114,7 @@ public class DecalPainter : IDisposable
         Vector3 normal,
         Vector3 tangent,
         Vector2 decalSize,
+        float projectionDepth,
         Color color,
         Vector3 transformScale
     )
@@ -122,6 +124,7 @@ public class DecalPainter : IDisposable
         mappingMaterial.SetVector(_decalNormalNameID, normal.normalized);
         mappingMaterial.SetVector(_decalTangentNameID, tangent.normalized);
         mappingMaterial.SetColor(_colorNameID, color);
+        mappingMaterial.SetFloat(_projectionDepthID, projectionDepth);
         mappingMaterial.SetVector(_objectScaleNameID, transformScale);
     }
 

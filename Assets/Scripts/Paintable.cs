@@ -67,6 +67,7 @@ public class Paintable : MonoBehaviour
             normal: normalOS,
             tangent: tangentOS,
             decalSize: Vector2.one * size,
+            projectionDepth: 1f,
             color: color,
             transformScale: transform.lossyScale
         );

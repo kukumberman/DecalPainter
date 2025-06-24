@@ -2,6 +2,9 @@ using UnityEngine;
 
 public class MeshPaintTester : MonoBehaviour
 {
+    [SerializeField]
+    private int _textureSize = 2048;
+
     [Header("Decal")]
     [SerializeField]
     MeshRenderer _decalPlane;
@@ -23,7 +26,7 @@ public class MeshPaintTester : MonoBehaviour
         _targetMeshRenderer.sharedMaterial = _targetMeshMaterial;
 
         // TargetMesh専用のデカール累積テクスチャを生成し、セットする
-        _decalPainter = new DecalPainter(_targetMesh);
+        _decalPainter = new DecalPainter(_targetMesh, _textureSize);
         _decalPainter.BakeBaseTexture(_targetMeshMaterial.mainTexture);
         _targetMeshMaterial.mainTexture = _decalPainter.texture;
 
@@ -57,7 +60,8 @@ public class MeshPaintTester : MonoBehaviour
                 ),
                 normal: targetMeshTransform.InverseTransformDirection(-decalPlaneTransform.forward),
                 tangent: targetMeshTransform.InverseTransformDirection(decalPlaneTransform.right),
-                decalSize: size,
+                decalSize: (Vector2)size,
+                projectionDepth: size.z,
                 color: Color.white,
                 transformScale: targetMeshTransform.lossyScale
             );
