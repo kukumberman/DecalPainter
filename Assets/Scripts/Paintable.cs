@@ -37,7 +37,12 @@ public class Paintable : MonoBehaviour
 
         // このMesh用デカール累積テクスチャを生成・設定
         int textureSize = _material.mainTexture != null ? _material.mainTexture.width : 1024;
-        _decalPainter = new DecalPainter(_meshFilter, textureSize);
+        var props = new DecalPainterProperties
+        {
+            Device = DecalPainterDevice.CPU,
+            TextureSize = textureSize
+        };
+        _decalPainter = new DecalPainter(_meshFilter, props);
         _decalPainter.BakeBaseTexture(_material.mainTexture);
         _material.mainTexture = _decalPainter.texture;
 

@@ -553,11 +553,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f41bb1a75c7a3874ea584d678fab19c6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _textureSize: 2048
+  _props:
+    OverrideTextureSize: 0
+    TextureSize: 2048
+    Device: 1
   _decalPlane: {fileID: 1025727679}
   _targetMesh: {fileID: 1248700068}
   _targetMeshRenderer: {fileID: 1248700066}
   _key: 323
+  _pauseEditorOnPaint: 1
 --- !u!4 &434838720
 Transform:
   m_ObjectHideFlags: 0

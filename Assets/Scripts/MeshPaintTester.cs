@@ -3,7 +3,7 @@ using UnityEngine;
 public class MeshPaintTester : MonoBehaviour
 {
     [SerializeField]
-    private int _textureSize = 2048;
+    private DecalPainterProperties _props;
 
     [Header("Decal")]
     [SerializeField]
@@ -19,6 +19,9 @@ public class MeshPaintTester : MonoBehaviour
     [SerializeField]
     private KeyCode _key = KeyCode.Mouse0;
 
+    [SerializeField]
+    private bool _pauseEditorOnPaint = false;
+
     DecalPainter _decalPainter;
     Material _targetMeshMaterial;
 
@@ -29,7 +32,7 @@ public class MeshPaintTester : MonoBehaviour
         _targetMeshRenderer.sharedMaterial = _targetMeshMaterial;
 
         // TargetMesh専用のデカール累積テクスチャを生成し、セットする
-        _decalPainter = new DecalPainter(_targetMesh, _textureSize);
+        _decalPainter = new DecalPainter(_targetMesh, _props);
         _decalPainter.BakeBaseTexture(_targetMeshMaterial.mainTexture);
         _targetMeshMaterial.mainTexture = _decalPainter.texture;
 
@@ -71,6 +74,13 @@ public class MeshPaintTester : MonoBehaviour
 
             // 累積描画
             _decalPainter.Paint();
+
+#if UNITY_EDITOR
+            if (_pauseEditorOnPaint)
+            {
+                Debug.Break();
+            }
+#endif
         }
     }
 

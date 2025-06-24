@@ -1,12 +1,38 @@
 using System;
+using Unity.Profiling;
 using UnityEngine;
+using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
+
+public enum DecalPainterDevice
+{
+    None,
+    CPU,
+    GPU,
+}
+
+[Serializable]
+public sealed class DecalPainterProperties
+{
+    public bool OverrideTextureSize;
+    public int TextureSize;
+    public DecalPainterDevice Device;
+}
 
 /// <summary>
 /// Meshに対してモデル空間にてブラシ描画をし、その描画結果をUVに展開されたTextureとして更新する。
 /// </summary>
 public class DecalPainter : IDisposable
 {
+    static readonly ProfilerMarker s_MarkerBake = new ProfilerMarker(
+        ProfilerCategory.Render,
+        "DecalPainter.BakeBaseTexture"
+    );
+    static readonly ProfilerMarker s_MarkerPaint = new ProfilerMarker(
+        ProfilerCategory.Render,
+        "DecalPainter.Paint"
+    );
+
     const string SHADER_NAME = "DecalMapping";
     static readonly int _decalTextureNameID = Shader.PropertyToID("_DecalTexture");
     static readonly int _accumulateTextureNameID = Shader.PropertyToID("_AccumulateTexture");
@@ -18,25 +44,50 @@ public class DecalPainter : IDisposable
     static readonly int _colorNameID = Shader.PropertyToID("_Color");
     static readonly int _objectScaleNameID = Shader.PropertyToID("_ObjectScale");
 
-    public Texture2D texture { get; private set; }
+    public Texture texture { get; private set; }
     public Material mappingMaterial { get; private set; }
+
+    private CommandBuffer _command;
 
     Mesh _targetMesh;
 
-    public DecalPainter(MeshFilter targetMeshFilter, int textureSize = 2048)
+    public DecalPainter(MeshFilter targetMeshFilter, DecalPainterProperties props)
     {
+        _command = new CommandBuffer();
+
         // 転写に使う情報。強制したいのでMeshFilterでもらい、Meshのコピーを複製。
         _targetMesh = targetMeshFilter.mesh;
 
+        var textureSize = props.TextureSize;
+
         // 累積テクスチャ
-        texture = new Texture2D(textureSize, textureSize, TextureFormat.RGBA32, false);
-        var pixels = new Color[textureSize * textureSize];
-        for (int i = 0; i < pixels.Length; ++i)
+        if (props.Device == DecalPainterDevice.GPU)
         {
-            pixels[i] = Color.white;
+            texture = new RenderTexture(
+                props.TextureSize,
+                props.TextureSize,
+                0,
+                RenderTextureFormat.ARGB32,
+                0
+            );
         }
-        texture.SetPixels(pixels);
-        texture.Apply();
+        else if (props.Device == DecalPainterDevice.CPU)
+        {
+            var texture2D = new Texture2D(textureSize, textureSize, TextureFormat.RGBA32, false);
+            var pixels = new Color[textureSize * textureSize];
+            for (int i = 0; i < pixels.Length; ++i)
+            {
+                pixels[i] = Color.white;
+            }
+            texture2D.SetPixels(pixels);
+            texture2D.Apply();
+
+            texture = texture2D;
+        }
+        else
+        {
+            throw new ArgumentException();
+        }
 
         // 転写用マテリアル
         // NOTE: 動的にシェーダーをFindしているので、ビルド時にはProjectSettings>Graphics>Always Included Shadersに入れておく必要がある。
@@ -52,6 +103,9 @@ public class DecalPainter : IDisposable
 
     public void Dispose()
     {
+        _command.Release();
+        _command = null;
+
         if (texture != null)
         {
             Object.Destroy(texture);
@@ -82,12 +136,28 @@ public class DecalPainter : IDisposable
     /// </summary>
     public void BakeBaseTexture(Texture source)
     {
+        s_MarkerBake.Begin();
+
+        if (texture is Texture2D)
+        {
+            BakeTextureUsingCPU(source);
+        }
+        else if (texture is RenderTexture)
+        {
+            BakeTextureUsingGPU(source);
+        }
+
+        s_MarkerBake.End();
+    }
+
+    private void BakeTextureUsingCPU(Texture source)
+    {
         if (source == null)
         {
             return;
         }
         var src = source;
-        var dst = texture;
+        var dst = texture as Texture2D;
 
         // RenderTargetの設定
         var temporaryActiveRenderTarget = RenderTexture.GetTemporary(dst.width, dst.height, 0);
@@ -102,6 +172,15 @@ public class DecalPainter : IDisposable
         // RenderTargetを元に戻す
         RenderTexture.active = activeRenderTexture;
         RenderTexture.ReleaseTemporary(temporaryActiveRenderTarget);
+    }
+
+    private void BakeTextureUsingGPU(Texture source)
+    {
+        _command.Blit(source, texture);
+
+        Graphics.ExecuteCommandBuffer(_command);
+
+        _command.Clear();
     }
 
     /// <summary>
@@ -133,7 +212,23 @@ public class DecalPainter : IDisposable
     /// </summary>
     public void Paint()
     {
-        var dst = texture;
+        s_MarkerPaint.Begin();
+
+        if (texture is Texture2D)
+        {
+            PaintUsingCPU();
+        }
+        else if (texture is RenderTexture)
+        {
+            PaintUsingGPU();
+        }
+
+        s_MarkerPaint.End();
+    }
+
+    private void PaintUsingCPU()
+    {
+        var dst = texture as Texture2D;
 
         // RenderTargetの設定
         var temporaryRenderTexture = RenderTexture.GetTemporary(dst.width, dst.height, 0);
@@ -151,6 +246,21 @@ public class DecalPainter : IDisposable
 
         // RenderTargetを元に戻す
         RenderTexture.active = activeRenderTexture;
+        RenderTexture.ReleaseTemporary(temporaryRenderTexture);
+    }
+
+    private void PaintUsingGPU()
+    {
+        var temporaryRenderTexture = RenderTexture.GetTemporary(texture.width, texture.height, 0);
+
+        _command.SetRenderTarget(temporaryRenderTexture);
+        _command.DrawMesh(_targetMesh, Matrix4x4.identity, mappingMaterial, 0, 0);
+        _command.Blit(temporaryRenderTexture, texture);
+
+        Graphics.ExecuteCommandBuffer(_command);
+
+        _command.Clear();
+
         RenderTexture.ReleaseTemporary(temporaryRenderTexture);
     }
 }
