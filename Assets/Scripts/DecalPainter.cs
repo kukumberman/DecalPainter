@@ -112,13 +112,13 @@ public class DecalPainter : IDisposable
         Vector3 paintPositionOnObjectSpace,
         Vector3 normal,
         Vector3 tangent,
-        float decalSize,
+        Vector2 decalSize,
         Color color,
         Vector3 transformScale
     )
     {
         mappingMaterial.SetVector(_decalPositionOSNameID, paintPositionOnObjectSpace);
-        mappingMaterial.SetFloat(_decalSizeNameID, decalSize);
+        mappingMaterial.SetVector(_decalSizeNameID, decalSize);
         mappingMaterial.SetVector(_decalNormalNameID, normal.normalized);
         mappingMaterial.SetVector(_decalTangentNameID, tangent.normalized);
         mappingMaterial.SetColor(_colorNameID, color);

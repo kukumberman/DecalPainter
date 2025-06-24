@@ -34,7 +34,7 @@ Shader "DecalMapping"
 		CBUFFER_START(UnityPerMaterial)
 		float4 _AccumulateTexture_ST;
 		float4 _DecalTexture_ST;
-		float _DecalSize;
+		float2 _DecalSize;
 		float3 _DecalPositionOS;
 		float3 _DecalNormal;
 		float3 _DecalTangent;

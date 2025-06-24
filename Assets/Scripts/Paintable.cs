@@ -66,7 +66,7 @@ public class Paintable : MonoBehaviour
             paintPositionOnObjectSpace: positionOS,
             normal: normalOS,
             tangent: tangentOS,
-            decalSize: size,
+            decalSize: Vector2.one * size,
             color: color,
             transformScale: transform.lossyScale
         );
