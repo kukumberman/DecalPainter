@@ -16,6 +16,9 @@ public class MeshPaintTester : MonoBehaviour
     [SerializeField]
     MeshRenderer _targetMeshRenderer;
 
+    [SerializeField]
+    private KeyCode _key = KeyCode.Mouse0;
+
     DecalPainter _decalPainter;
     Material _targetMeshMaterial;
 
@@ -47,7 +50,7 @@ public class MeshPaintTester : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (Input.GetKeyDown(_key))
         {
             var decalPlaneTransform = _decalPlane.transform;
 
@@ -76,12 +79,22 @@ public class MeshPaintTester : MonoBehaviour
     [UnityEditor.CustomEditor(typeof(MeshPaintTester))]
     public class MeshPaintTesterEditor : UnityEditor.Editor
     {
+        private UnityEditor.SerializedProperty _prop;
+        private KeyCode _key;
+
+        private void OnEnable()
+        {
+            _prop = serializedObject.FindProperty("_key");
+        }
+
         public override void OnInspectorGUI()
         {
             base.OnInspectorGUI();
 
+            _key = (KeyCode)_prop.intValue;
+
             UnityEditor.EditorGUILayout.Space(30);
-            UnityEditor.EditorGUILayout.HelpBox("Spaceキーでペイント", UnityEditor.MessageType.Info);
+            UnityEditor.EditorGUILayout.HelpBox($"{_key}キーでペイント", UnityEditor.MessageType.Info);
         }
     }
 #endif
