@@ -30,6 +30,9 @@ Shader "DecalMapping"
 		SAMPLER(sampler_AccumulateTexture);
 		TEXTURE2D(_DecalTexture);
 		SAMPLER(sampler_DecalTexture);
+
+		TEXTURE2D(_MyDepthTexture);
+		SAMPLER(sampler_MyDepthTexture);
 		
 		CBUFFER_START(UnityPerMaterial)
 		float4 _AccumulateTexture_ST;
@@ -41,6 +44,19 @@ Shader "DecalMapping"
 		float4 _Color;
 		float3 _ObjectScale;
 		float _ProjectionDepth;
+		
+		float4x4 X_UNITY_MATRIX_V;
+		float4x4 X_glstate_matrix_projection;
+		#define X_UNITY_MATRIX_P OptimizeProjectionMatrix(X_glstate_matrix_projection)
+		float4x4 X_UNITY_MATRIX_VP;
+		float4x4 X_UNITY_MATRIX_I_V;
+		float4x4 X_UNITY_MATRIX_I_P;
+		float4x4 X_UNITY_MATRIX_I_VP;
+
+		float4x4 X_unity_CameraProjection;
+		float4x4 X_unity_CameraInvProjection;
+		float4x4 X_unity_WorldToCamera;
+		float4x4 X_unity_unity_CameraToWorld;
 		CBUFFER_END
 		ENDHLSL
 
@@ -53,8 +69,6 @@ Shader "DecalMapping"
 			#pragma target 2.0
 			#pragma vertex ProcessVertex
 			#pragma fragment ProcessFragment
-			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
-
 
 			struct Attributes
 			{
@@ -70,7 +84,62 @@ Shader "DecalMapping"
 				float2 texcoord : TEXCOORD0;
 				float3 positionOS : TEXCOORD1;
 				half3 normalOS : TEXCOORD2;
+				float3 positionWS : TEXCOORD3;
+				float3 positionVS : TEXCOORD4;
 			};
+
+			float3 Decal_TransformWorldToView(float3 positionWS)
+			{
+				return mul(X_UNITY_MATRIX_V, float4(positionWS, 1.0)).xyz;
+			}
+
+			float3 Decal_ComputeWorldSpacePosition(float2 uv, float depth)
+			{
+				return ComputeWorldSpacePosition(uv, depth, X_UNITY_MATRIX_I_VP);
+			}
+
+			float3 Decal_ComputeViewSpacePosition(float2 uv, float depth)
+			{
+				return ComputeViewSpacePosition(uv, depth, X_UNITY_MATRIX_I_P);
+			}
+
+			half4 DepthColorBlend(Varyings input, half4 acc, half4 decalColor, float2 uv)
+			{
+				float depth = SAMPLE_TEXTURE2D(_MyDepthTexture, sampler_MyDepthTexture, uv).r;
+
+				// float3 worldPos = Decal_ComputeWorldSpacePosition(uv, depth);
+
+				// ok
+				// return half4(depth, depth, depth, 1);
+				// return input.positionWS.x > 0 ? half4(0, 1, 0, 1) : half4(1, 0, 0, 1);
+				// return worldPos.z > 0 ? half4(0, 1, 0, 1) : half4(1, 0, 0, 1);
+				// return half4(input.positionWS.xyz, 1);
+				
+				// return half4(input.positionVS.xyz, 1);
+				
+				float3 VS = Decal_ComputeViewSpacePosition(uv, depth);
+
+				// return half4(VS, 1);
+				// return half4(input.positionVS, 1);
+
+				float viewZ = -input.positionVS.z;
+				float depthZ = VS.z;
+				
+				float z = 0;
+				z = depthZ;
+
+				// return half4(z, z, z, 1);
+
+				if (viewZ > depthZ + 0.001)
+				{
+					// return half4(1, 0, 0, 1);
+					return acc;
+				}
+
+				return decalColor;
+				// return half4(1, 1, 1, 1);
+				// return acc;
+			}
 
 			Varyings ProcessVertex(Attributes input)
 			{
@@ -87,6 +156,10 @@ Shader "DecalMapping"
 				output.texcoord = TRANSFORM_TEX(input.texcoord, _AccumulateTexture);
 				output.normalOS = input.normal;
 				output.positionOS = input.positionOS.xyz;
+				
+				output.positionWS = TransformObjectToWorld(output.positionOS);
+				output.positionVS = Decal_TransformWorldToView(output.positionWS);
+				
 				return output;
 			}
 
@@ -129,7 +202,7 @@ Shader "DecalMapping"
 
 				float3 direction = (input.positionOS - _DecalPositionOS);
 
-				if (length(direction) > _ProjectionDepth)
+				if (-input.positionVS.z > _ProjectionDepth)
 				{
 					return acc;
 				}
@@ -139,7 +212,9 @@ Shader "DecalMapping"
 					return acc;
 				}
 
-				return half4(lerp(acc.xyz, decalColor.xyz, decalColor.w), acc.w);
+				half4 finalColor = half4(lerp(acc.xyz, decalColor.xyz, decalColor.w), acc.w);
+				// return finalColor;
+				return DepthColorBlend(input, acc, finalColor, uv);
 			}
 			ENDHLSL
 		}

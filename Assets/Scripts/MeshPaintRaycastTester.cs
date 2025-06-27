@@ -1,5 +1,13 @@
 using UnityEngine;
 
+public enum DecalOrientationType
+{
+    None,
+    HitNormal,
+    CameraUp,
+    WorldUp,
+}
+
 public sealed class MeshPaintRaycastTester : MonoBehaviour
 {
     [SerializeField]
@@ -12,7 +20,7 @@ public sealed class MeshPaintRaycastTester : MonoBehaviour
     private float _hitDistanceOffset;
 
     [SerializeField]
-    private bool _useCameraUpDirection = false;
+    private DecalOrientationType _decalOrientation;
 
     [SerializeField]
     private float _angleMultiplier = 1f;
@@ -33,11 +41,15 @@ public sealed class MeshPaintRaycastTester : MonoBehaviour
 
     private float _currentScale;
 
+    private Transform _decal;
+
     private void Start()
     {
         _camera = Camera.main;
 
-        _currentScale = _positionContainer.localScale.x;
+        _decal = _positionContainer.GetComponentInChildren<CustomDecalProjector>().transform;
+
+        _currentScale = _decal.lossyScale.x;
         SetScale(_currentScale);
     }
 
@@ -52,14 +64,20 @@ public sealed class MeshPaintRaycastTester : MonoBehaviour
         {
             _positionContainer.position = hit.point + hit.normal * _hitDistanceOffset;
 
-            if (_useCameraUpDirection)
+            if (
+                _decalOrientation == DecalOrientationType.CameraUp
+                || _decalOrientation == DecalOrientationType.WorldUp
+            )
             {
                 Vector3 forward = -hit.normal;
-                Vector3 up = _camera.transform.up;
+                Vector3 up =
+                    _decalOrientation == DecalOrientationType.CameraUp
+                        ? _camera.transform.up
+                        : Vector3.up;
 
                 _positionContainer.rotation = Quaternion.LookRotation(forward, up);
             }
-            else
+            else if (_decalOrientation == DecalOrientationType.HitNormal)
             {
                 _positionContainer.forward = hit.normal * -1f;
             }
@@ -101,8 +119,8 @@ public sealed class MeshPaintRaycastTester : MonoBehaviour
 
     private void SetScale(float scaleFactor)
     {
-        var scale = _positionContainer.localScale;
+        var scale = _decal.localScale;
 
-        _positionContainer.localScale = new Vector3(scaleFactor, scaleFactor, scale.z);
+        _decal.localScale = new Vector3(scaleFactor, scaleFactor, scale.z);
     }
 }

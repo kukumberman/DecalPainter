@@ -48,12 +48,13 @@ public class DecalPainter : IDisposable
     public Material mappingMaterial { get; private set; }
 
     private CommandBuffer _command;
-
+    private MeshFilter _meshFilter;
     Mesh _targetMesh;
 
     public DecalPainter(MeshFilter targetMeshFilter, DecalPainterProperties props)
     {
         _command = new CommandBuffer();
+        _meshFilter = targetMeshFilter;
 
         // 転写に使う情報。強制したいのでMeshFilterでもらい、Meshのコピーを複製。
         _targetMesh = targetMeshFilter.mesh;
@@ -253,8 +254,18 @@ public class DecalPainter : IDisposable
     {
         var temporaryRenderTexture = RenderTexture.GetTemporary(texture.width, texture.height, 0);
 
+        // same as
+        /*
+         Matrix4x4.TRS(
+            _meshFilter.transform.position,
+            _meshFilter.transform.rotation,
+            _meshFilter.transform.lossyScale
+        )
+         */
+        var matrix = _meshFilter.transform.localToWorldMatrix;
+
         _command.SetRenderTarget(temporaryRenderTexture);
-        _command.DrawMesh(_targetMesh, Matrix4x4.identity, mappingMaterial, 0, 0);
+        _command.DrawMesh(_targetMesh, matrix, mappingMaterial, 0, 0);
         _command.Blit(temporaryRenderTexture, texture);
 
         Graphics.ExecuteCommandBuffer(_command);

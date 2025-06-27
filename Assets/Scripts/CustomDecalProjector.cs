@@ -2,6 +2,12 @@ using UnityEngine;
 
 public sealed class CustomDecalProjector : MonoBehaviour
 {
+    public float Width => transform.lossyScale.x;
+    public float Height => transform.lossyScale.y;
+    public float ProjectionDepth => transform.lossyScale.z;
+    public Vector3 Size => transform.lossyScale;
+    public float NearClipPlane => 0.01f;
+
     private void OnDrawGizmos()
     {
         var size = transform.lossyScale;
