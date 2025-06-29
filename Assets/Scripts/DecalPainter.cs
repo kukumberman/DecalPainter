@@ -239,7 +239,7 @@ public class DecalPainter : IDisposable
         // 対象Meshを用いて、デカール画像を累積テクスチャに重ねてRenderTargetに描画する
         GL.Clear(clearDepth: true, clearColor: true, Color.clear);
         mappingMaterial.SetPass(0);
-        Graphics.DrawMeshNow(_targetMesh, Vector3.zero, Quaternion.identity);
+        Graphics.DrawMeshNow(_targetMesh, _meshFilter.transform.localToWorldMatrix);
 
         // RenderTargetを累積テクスチャに書き込む
         dst.ReadPixels(new Rect(0f, 0f, dst.width, dst.height), 0, 0);
