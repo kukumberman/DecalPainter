@@ -13,7 +13,6 @@ public class Paintable : MonoBehaviour
     MeshRenderer _meshRenderer;
     MeshFilter _meshFilter;
     DecalPainter _decalPainter;
-    Material _material;
 
     bool _initialized;
 
@@ -28,23 +27,16 @@ public class Paintable : MonoBehaviour
         _meshRenderer = GetComponent<MeshRenderer>();
         _meshFilter = GetComponent<MeshFilter>();
 
-        // マテリアルをインスタンス化してそれを扱う
-        _material = _meshRenderer.material;
-        if (_material == null)
-        {
-            _material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-        }
-
         // このMesh用デカール累積テクスチャを生成・設定
-        int textureSize = _material.mainTexture != null ? _material.mainTexture.width : 1024;
         var props = new DecalPainterProperties
         {
-            Device = DecalPainterDevice.CPU,
-            TextureSize = textureSize
+            UvChannelIndex = 0,
+            OverridenTextureSize = new Vector2Int(0, 0),
+            SizeMode = BakeTextureDimensionsMode.Default,
+            TexturePropertyName = "_BaseMap"
         };
-        _decalPainter = new DecalPainter(_meshFilter, props);
-        _decalPainter.BakeBaseTexture(_material.mainTexture);
-        _material.mainTexture = _decalPainter.texture;
+        _decalPainter = new DecalPainter(_meshFilter, _meshRenderer, DecalPainterDevice.CPU, props);
+        _decalPainter.BakeAndAssignBaseTexture();
 
         // ペイントテクスチャを設定
         _decalPainter.SetDecalTexture(_brushTexture);
@@ -91,11 +83,5 @@ public class Paintable : MonoBehaviour
     {
         _decalPainter?.Dispose();
         _decalPainter = null;
-
-        if (_material != null)
-        {
-            Destroy(_material);
-            _material = null;
-        }
     }
 }

@@ -60,7 +60,7 @@ public sealed class DecalDepthRenderBehaviour : MonoBehaviour
 
         var nameID = "_MyDepthTexture";
 
-        _meshPaint.DecalPainter.mappingMaterial.SetTexture(
+        _meshPaint.DecalPainter.MappingMaterial.SetTexture(
             nameID,
             _depthTexture,
             RenderTextureSubElement.Depth
@@ -104,7 +104,7 @@ public sealed class DecalDepthRenderBehaviour : MonoBehaviour
         Graphics.ExecuteCommandBuffer(_command);
         _command.Clear();
 
-        var mat = _meshPaint.DecalPainter.mappingMaterial;
+        var mat = _meshPaint.DecalPainter.MappingMaterial;
         SetCameraMatrices(mat, _viewMatrix, _projectionMatrix);
     }
 

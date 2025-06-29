@@ -3,6 +3,9 @@ using UnityEngine;
 public class MeshPaintTester : MonoBehaviour
 {
     [SerializeField]
+    private DecalPainterDevice _deviceType;
+
+    [SerializeField]
     private DecalPainterProperties _props;
 
     [Header("Decal")]
@@ -24,7 +27,6 @@ public class MeshPaintTester : MonoBehaviour
     MeshRenderer _targetMeshRenderer;
 
     DecalPainter _decalPainter;
-    Material _targetMeshMaterial;
 
     public DecalPainter DecalPainter => _decalPainter;
 
@@ -33,14 +35,14 @@ public class MeshPaintTester : MonoBehaviour
         _targetMeshFilter = _target.GetComponent<MeshFilter>();
         _targetMeshRenderer = _target.GetComponent<MeshRenderer>();
 
-        // TargetMeshのMaterialを複製して使う (参照先マテリアルを変更したくないのでInstantiateしたMaterialをSharedに入れて使う)
-        _targetMeshMaterial = _targetMeshRenderer.material;
-        _targetMeshRenderer.sharedMaterial = _targetMeshMaterial;
-
         // TargetMesh専用のデカール累積テクスチャを生成し、セットする
-        _decalPainter = new DecalPainter(_targetMeshFilter, _props);
-        _decalPainter.BakeBaseTexture(_targetMeshMaterial.mainTexture);
-        _targetMeshMaterial.mainTexture = _decalPainter.texture;
+        _decalPainter = new DecalPainter(
+            _targetMeshFilter,
+            _targetMeshRenderer,
+            _deviceType,
+            _props
+        );
+        _decalPainter.BakeAndAssignBaseTexture();
 
         // デカール画像を設定する
         _decalPainter.SetDecalTexture(_decalPlane.sharedMaterial.mainTexture);
@@ -50,11 +52,6 @@ public class MeshPaintTester : MonoBehaviour
     {
         _decalPainter?.Dispose();
         _decalPainter = null;
-
-        if (_targetMeshMaterial != null)
-        {
-            Destroy(_targetMeshMaterial);
-        }
     }
 
     void Update()

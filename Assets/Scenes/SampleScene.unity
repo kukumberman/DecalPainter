@@ -526,10 +526,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f41bb1a75c7a3874ea584d678fab19c6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _deviceType: 2
   _props:
-    OverrideTextureSize: 0
-    TextureSize: 2048
-    Device: 2
+    SizeMode: 2
+    OverridenTextureSize: {x: 2048, y: 2048}
+    SizeMultiplier: 4
+    UvChannelIndex: 0
+    TexturePropertyName: _BaseMap
   _decalPlane: {fileID: 1025727679}
   _target: {fileID: 8164078558109754629}
   _key: 323

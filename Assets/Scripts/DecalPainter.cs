@@ -11,12 +11,21 @@ public enum DecalPainterDevice
     GPU,
 }
 
+public enum BakeTextureDimensionsMode
+{
+    Default,
+    Override,
+    Multiply,
+}
+
 [Serializable]
 public sealed class DecalPainterProperties
 {
-    public bool OverrideTextureSize;
-    public int TextureSize;
-    public DecalPainterDevice Device;
+    public BakeTextureDimensionsMode SizeMode;
+    public Vector2Int OverridenTextureSize;
+    public float SizeMultiplier;
+    public int UvChannelIndex;
+    public string TexturePropertyName;
 }
 
 /// <summary>
@@ -44,38 +53,62 @@ public class DecalPainter : IDisposable
     static readonly int _colorNameID = Shader.PropertyToID("_Color");
     static readonly int _objectScaleNameID = Shader.PropertyToID("_ObjectScale");
 
-    public Texture texture { get; private set; }
-    public Material mappingMaterial { get; private set; }
+    private Texture texture;
+    private Material mappingMaterial;
+
+    public Material MappingMaterial => mappingMaterial;
 
     private CommandBuffer _command;
-    private MeshFilter _meshFilter;
-    Mesh _targetMesh;
+    private DecalPainterProperties _props;
+    private MeshFilter _targetMeshFilter;
+    private MeshRenderer _targetMeshRenderer;
+    private Mesh _targetMesh;
+    private Material _targetMeshMaterial;
+    private Texture _baseTexture;
 
-    public DecalPainter(MeshFilter targetMeshFilter, DecalPainterProperties props)
+    public DecalPainter(
+        MeshFilter targetMeshFilter,
+        MeshRenderer targetMeshRenderer,
+        DecalPainterDevice device,
+        DecalPainterProperties props
+    )
     {
         _command = new CommandBuffer();
-        _meshFilter = targetMeshFilter;
+        _targetMeshFilter = targetMeshFilter;
+        _targetMeshRenderer = targetMeshRenderer;
+        _props = props;
+
+        // TargetMeshのMaterialを複製して使う (参照先マテリアルを変更したくないのでInstantiateしたMaterialをSharedに入れて使う)
+        _targetMeshMaterial = _targetMeshRenderer.material;
+        _targetMeshRenderer.sharedMaterial = _targetMeshMaterial;
+
+        _baseTexture = _targetMeshMaterial.GetTexture(_props.TexturePropertyName);
 
         // 転写に使う情報。強制したいのでMeshFilterでもらい、Meshのコピーを複製。
         _targetMesh = targetMeshFilter.mesh;
 
-        var textureSize = props.TextureSize;
+        var textureSize = CalculateBakeTextureDimensions();
 
         // 累積テクスチャ
-        if (props.Device == DecalPainterDevice.GPU)
+        if (device == DecalPainterDevice.GPU)
         {
             texture = new RenderTexture(
-                props.TextureSize,
-                props.TextureSize,
+                textureSize.x,
+                textureSize.y,
                 0,
                 RenderTextureFormat.ARGB32,
                 0
             );
         }
-        else if (props.Device == DecalPainterDevice.CPU)
+        else if (device == DecalPainterDevice.CPU)
         {
-            var texture2D = new Texture2D(textureSize, textureSize, TextureFormat.RGBA32, false);
-            var pixels = new Color[textureSize * textureSize];
+            var texture2D = new Texture2D(
+                textureSize.x,
+                textureSize.y,
+                TextureFormat.RGBA32,
+                false
+            );
+            var pixels = new Color[textureSize.x * textureSize.y];
             for (int i = 0; i < pixels.Length; ++i)
             {
                 pixels[i] = Color.white;
@@ -100,6 +133,16 @@ public class DecalPainter : IDisposable
         }
         mappingMaterial = new Material(shader);
         mappingMaterial.SetTexture(_accumulateTextureNameID, texture);
+
+        var attribute = GetUvAttributeFromChannelIndex(props.UvChannelIndex);
+        var hasUvAttribute = _targetMesh.HasVertexAttribute(attribute);
+        if (!hasUvAttribute)
+        {
+            Debug.LogWarning("HasVertexAttribute is false");
+        }
+
+        var keyword = string.Format("UV_CHANNEL_{0}", hasUvAttribute ? props.UvChannelIndex : 0);
+        mappingMaterial.EnableKeyword(keyword);
     }
 
     public void Dispose()
@@ -122,6 +165,11 @@ public class DecalPainter : IDisposable
             Object.Destroy(_targetMesh);
             _targetMesh = null;
         }
+        if (_targetMeshMaterial != null)
+        {
+            Object.Destroy(_targetMeshMaterial);
+            _targetMeshMaterial = null;
+        }
     }
 
     /// <summary>
@@ -132,10 +180,42 @@ public class DecalPainter : IDisposable
         mappingMaterial.SetTexture(_decalTextureNameID, decalTexture);
     }
 
+    public void BakeAndAssignBaseTexture()
+    {
+        BakeBaseTexture(_baseTexture);
+
+        _targetMeshMaterial.SetTexture(_props.TexturePropertyName, texture);
+    }
+
+    private Vector2Int CalculateBakeTextureDimensions()
+    {
+        if (_props.SizeMode == BakeTextureDimensionsMode.Override)
+        {
+            return _props.OverridenTextureSize;
+        }
+
+        var defaultSize = new Vector2Int(_baseTexture.width, _baseTexture.height);
+
+        if (_props.SizeMode == BakeTextureDimensionsMode.Default)
+        {
+            return defaultSize;
+        }
+
+        if (_props.SizeMode == BakeTextureDimensionsMode.Multiply)
+        {
+            return new Vector2Int(
+                (int)(defaultSize.x * _props.SizeMultiplier),
+                (int)(defaultSize.y * _props.SizeMultiplier)
+            );
+        }
+
+        throw new ArgumentException();
+    }
+
     /// <summary>
     /// texture(累積テクスチャ)に上書き描画をする
     /// </summary>
-    public void BakeBaseTexture(Texture source)
+    private void BakeBaseTexture(Texture source)
     {
         s_MarkerBake.Begin();
 
@@ -239,7 +319,7 @@ public class DecalPainter : IDisposable
         // 対象Meshを用いて、デカール画像を累積テクスチャに重ねてRenderTargetに描画する
         GL.Clear(clearDepth: true, clearColor: true, Color.clear);
         mappingMaterial.SetPass(0);
-        Graphics.DrawMeshNow(_targetMesh, _meshFilter.transform.localToWorldMatrix);
+        Graphics.DrawMeshNow(_targetMesh, _targetMeshFilter.transform.localToWorldMatrix);
 
         // RenderTargetを累積テクスチャに書き込む
         dst.ReadPixels(new Rect(0f, 0f, dst.width, dst.height), 0, 0);
@@ -262,7 +342,7 @@ public class DecalPainter : IDisposable
             _meshFilter.transform.lossyScale
         )
          */
-        var matrix = _meshFilter.transform.localToWorldMatrix;
+        var matrix = _targetMeshFilter.transform.localToWorldMatrix;
 
         _command.SetRenderTarget(temporaryRenderTexture);
         _command.DrawMesh(_targetMesh, matrix, mappingMaterial, 0, 0);
@@ -273,5 +353,22 @@ public class DecalPainter : IDisposable
         _command.Clear();
 
         RenderTexture.ReleaseTemporary(temporaryRenderTexture);
+    }
+
+    private static readonly VertexAttribute[] s_TexCoordVertexAttributes = new VertexAttribute[]
+    {
+        VertexAttribute.TexCoord0,
+        VertexAttribute.TexCoord1,
+        VertexAttribute.TexCoord2,
+        VertexAttribute.TexCoord3,
+        VertexAttribute.TexCoord4,
+        VertexAttribute.TexCoord5,
+        VertexAttribute.TexCoord6,
+        VertexAttribute.TexCoord7,
+    };
+
+    private static VertexAttribute GetUvAttributeFromChannelIndex(int index)
+    {
+        return s_TexCoordVertexAttributes[index];
     }
 }

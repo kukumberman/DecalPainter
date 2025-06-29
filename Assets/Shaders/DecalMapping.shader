@@ -63,18 +63,26 @@ Shader "DecalMapping"
 		Pass
 		{
 			Blend One Zero
-			Cull Back
+			Cull Off
 
 			HLSLPROGRAM
 			#pragma target 2.0
 			#pragma vertex ProcessVertex
 			#pragma fragment ProcessFragment
+			#pragma shader_feature_local _ UV_CHANNEL_0 UV_CHANNEL_1 UV_CHANNEL_2 UV_CHANNEL_3 UV_CHANNEL_4 UV_CHANNEL_5 UV_CHANNEL_6 UV_CHANNEL_7
 
 			struct Attributes
 			{
 				float4 positionOS : POSITION;
-				float2 texcoord : TEXCOORD0;
 				float3 normal : NORMAL;
+				float2 uv0 : TEXCOORD0;
+				float2 uv1 : TEXCOORD1;
+				float2 uv2 : TEXCOORD2;
+				float2 uv3 : TEXCOORD3;
+				float2 uv4 : TEXCOORD4;
+				float2 uv5 : TEXCOORD5;
+				float2 uv6 : TEXCOORD6;
+				float2 uv7 : TEXCOORD7;
 				UNITY_VERTEX_INPUT_INSTANCE_ID
 			};
 
@@ -87,6 +95,29 @@ Shader "DecalMapping"
 				float3 positionWS : TEXCOORD3;
 				float3 positionVS : TEXCOORD4;
 			};
+
+			float2 GetUV(Attributes IN)
+			{
+			#if defined(UV_CHANNEL_0)
+				return IN.uv0;
+			#elif defined(UV_CHANNEL_1)
+				return IN.uv1;
+			#elif defined(UV_CHANNEL_2)
+				return IN.uv2;
+			#elif defined(UV_CHANNEL_3)
+				return IN.uv3;
+			#elif defined(UV_CHANNEL_4)
+				return IN.uv4;
+			#elif defined(UV_CHANNEL_5)
+				return IN.uv5;
+			#elif defined(UV_CHANNEL_6)
+				return IN.uv6;
+			#elif defined(UV_CHANNEL_7)
+				return IN.uv7;
+			#else
+				return IN.uv0;
+			#endif
+			}
 
 			float3 Decal_TransformWorldToView(float3 positionWS)
 			{
@@ -146,14 +177,16 @@ Shader "DecalMapping"
 				UNITY_SETUP_INSTANCE_ID(v);
 				Varyings output = (Varyings)0;
 
+				float2 texcoord = GetUV(input);
+
 				// UV座標をそのままClip空間として表示
 				// プラットフォームごとによる上下の違いについて：https://docs.unity3d.com/2019.1/Documentation/Manual/SL-PlatformDifferences.html
-				output.positionCS = float4(input.texcoord.xy * 2 - 1, 0, 1);
+				output.positionCS = float4(texcoord.xy * 2 - 1, 0, 1);
 				output.positionCS.y *= _ProjectionParams.x;
 
 				// 計算をObject空間で行うため、Object空間の法線と座標を渡す。
 				// World空間でもいいが、halfで精度が足りなくなりやすいので理由がなければObject空間で計算する。
-				output.texcoord = TRANSFORM_TEX(input.texcoord, _AccumulateTexture);
+				output.texcoord = TRANSFORM_TEX(texcoord, _AccumulateTexture);
 				output.normalOS = input.normal;
 				output.positionOS = input.positionOS.xyz;
 				
