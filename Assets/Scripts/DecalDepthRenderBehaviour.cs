@@ -6,9 +6,6 @@ using UnityEngine.UI;
 public sealed class DecalDepthRenderBehaviour : MonoBehaviour
 {
     [SerializeField]
-    private MeshPaintTester _meshPaint;
-
-    [SerializeField]
     private CustomDecalProjector _decalProjector;
 
     [SerializeField]
@@ -58,14 +55,6 @@ public sealed class DecalDepthRenderBehaviour : MonoBehaviour
             _rawImage.texture = _depthTexture;
         }
 
-        var nameID = "_MyDepthTexture";
-
-        _meshPaint.DecalPainter.MappingMaterial.SetTexture(
-            nameID,
-            _depthTexture,
-            RenderTextureSubElement.Depth
-        );
-
         _overrideRenderer = new OverrideRenderer(_renderers, _overrideMaterial);
     }
 
@@ -103,9 +92,16 @@ public sealed class DecalDepthRenderBehaviour : MonoBehaviour
 
         Graphics.ExecuteCommandBuffer(_command);
         _command.Clear();
+    }
 
-        var mat = _meshPaint.DecalPainter.MappingMaterial;
-        SetCameraMatrices(mat, _viewMatrix, _projectionMatrix);
+    public void SetDepthTexture(Material material)
+    {
+        material.SetTexture("_MyDepthTexture", _depthTexture, RenderTextureSubElement.Depth);
+    }
+
+    public void SetCameraMatrices(Material material)
+    {
+        SetCameraMatrices(material, _viewMatrix, _projectionMatrix);
     }
 
     private static bool IsCameraProjectionMatrixFlipped()

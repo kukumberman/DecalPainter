@@ -19,13 +19,19 @@ public enum BakeTextureDimensionsMode
 }
 
 [Serializable]
-public sealed class DecalPainterProperties
+public sealed class DecalPainterProperties : IDecalPainterProps
 {
     public BakeTextureDimensionsMode SizeMode;
     public Vector2Int OverridenTextureSize;
     public float SizeMultiplier;
     public int UvChannelIndex;
     public string TexturePropertyName;
+
+    BakeTextureDimensionsMode IDecalPainterProps.SizeMode => SizeMode;
+    Vector2Int IDecalPainterProps.OverridenTextureSize => OverridenTextureSize;
+    float IDecalPainterProps.SizeMultiplier => SizeMultiplier;
+    int IDecalPainterProps.UvChannelIndex => UvChannelIndex;
+    string IDecalPainterProps.TexturePropertyName => TexturePropertyName;
 }
 
 /// <summary>
@@ -59,7 +65,7 @@ public class DecalPainter : IDisposable
     public Material MappingMaterial => mappingMaterial;
 
     private CommandBuffer _command;
-    private DecalPainterProperties _props;
+    private IDecalPainterProps _props;
     private MeshFilter _targetMeshFilter;
     private MeshRenderer _targetMeshRenderer;
     private Mesh _targetMesh;
@@ -70,7 +76,7 @@ public class DecalPainter : IDisposable
         MeshFilter targetMeshFilter,
         MeshRenderer targetMeshRenderer,
         DecalPainterDevice device,
-        DecalPainterProperties props
+        IDecalPainterProps props
     )
     {
         _command = new CommandBuffer();
@@ -84,8 +90,7 @@ public class DecalPainter : IDisposable
 
         _baseTexture = _targetMeshMaterial.GetTexture(_props.TexturePropertyName);
 
-        // 転写に使う情報。強制したいのでMeshFilterでもらい、Meshのコピーを複製。
-        _targetMesh = targetMeshFilter.mesh;
+        _targetMesh = targetMeshFilter.sharedMesh;
 
         var textureSize = CalculateBakeTextureDimensions();
 
@@ -159,11 +164,6 @@ public class DecalPainter : IDisposable
         {
             Object.Destroy(mappingMaterial);
             mappingMaterial = null;
-        }
-        if (_targetMesh != null)
-        {
-            Object.Destroy(_targetMesh);
-            _targetMesh = null;
         }
         if (_targetMeshMaterial != null)
         {

@@ -3,6 +3,9 @@ using UnityEngine;
 public class MeshPaintTester : MonoBehaviour
 {
     [SerializeField]
+    private DecalDepthRenderBehaviour _decalDepthRenderer;
+
+    [SerializeField]
     private DecalPainterDevice _deviceType;
 
     [SerializeField]
@@ -32,6 +35,11 @@ public class MeshPaintTester : MonoBehaviour
 
     void Awake()
     {
+        if (_target == null)
+        {
+            return;
+        }
+
         _targetMeshFilter = _target.GetComponent<MeshFilter>();
         _targetMeshRenderer = _target.GetComponent<MeshRenderer>();
 
@@ -46,6 +54,8 @@ public class MeshPaintTester : MonoBehaviour
 
         // デカール画像を設定する
         _decalPainter.SetDecalTexture(_decalPlane.sharedMaterial.mainTexture);
+
+        _decalDepthRenderer.SetDepthTexture(_decalPainter.MappingMaterial);
     }
 
     void OnDestroy()
@@ -74,6 +84,8 @@ public class MeshPaintTester : MonoBehaviour
                 color: Color.white,
                 transformScale: targetMeshTransform.lossyScale
             );
+
+            _decalDepthRenderer.SetCameraMatrices(_decalPainter.MappingMaterial);
 
             // 累積描画
             _decalPainter.Paint();
