@@ -134,10 +134,26 @@ Shader "DecalMapping"
 				return ComputeViewSpacePosition(uv, depth, X_UNITY_MATRIX_I_P);
 			}
 
+			float SampleDepthTexture(float2 uv)
+			{
+				return SAMPLE_TEXTURE2D(_MyDepthTexture, sampler_MyDepthTexture, uv).r;
+			}
+
+			float SampleDepth(float2 uv)
+			{
+			#if UNITY_REVERSED_Z
+				float depth = SampleDepthTexture(uv);
+			#else
+				// Adjust z to match NDC for OpenGL
+				float depth = lerp(UNITY_NEAR_CLIP_VALUE, 1, SampleDepthTexture(uv));
+			#endif
+				
+				return depth;
+			}
+
 			half4 DepthColorBlend(Varyings input, half4 acc, half4 decalColor, float2 uv)
 			{
-				float depth = SAMPLE_TEXTURE2D(_MyDepthTexture, sampler_MyDepthTexture, uv).r;
-
+				float depth = SampleDepth(uv);
 				// float3 worldPos = Decal_ComputeWorldSpacePosition(uv, depth);
 
 				// ok
@@ -161,7 +177,7 @@ Shader "DecalMapping"
 
 				// return half4(z, z, z, 1);
 
-				if (viewZ > depthZ + 0.001)
+				if (viewZ > depthZ + 0.01)
 				{
 					// return half4(1, 0, 0, 1);
 					return acc;
