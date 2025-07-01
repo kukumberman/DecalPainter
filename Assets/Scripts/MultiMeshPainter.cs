@@ -16,6 +16,9 @@ public sealed class MultiMeshPainter : MonoBehaviour
     [SerializeField]
     private KeyCode _key;
 
+    [SerializeField]
+    private bool _keepPaintingWhenKeyIsHeld;
+
     private Transform _decalTransform;
     private Texture _decalTexture;
 
@@ -24,6 +27,12 @@ public sealed class MultiMeshPainter : MonoBehaviour
     private int _actualCount;
 
     private readonly Dictionary<PaintableObject, DecalPainter> _decalMap = new();
+
+    private readonly List<PaintableObject> _paintableObjects = new();
+    private readonly List<PaintableObject> _paintedObjectsWithoutCommit = new();
+    private readonly CollectionDiffChecker<PaintableObject> _diff = new();
+
+    private bool _commitChanges;
 
     private void Awake()
     {
@@ -57,9 +66,23 @@ public sealed class MultiMeshPainter : MonoBehaviour
 
         KeepOnlyValidHits();
 
-        if (Input.GetKey(_key))
+        FetchPaintableTargets();
+        RestorePreviousTargets();
+
+        var hasInput = _keepPaintingWhenKeyIsHeld ? Input.GetKey(_key) : Input.GetKeyDown(_key);
+
+        if (hasInput)
         {
+            _commitChanges = true;
             PaintOverTargets();
+        }
+        else
+        {
+            _commitChanges = false;
+            PaintOverTargets();
+
+            _paintedObjectsWithoutCommit.Clear();
+            _paintedObjectsWithoutCommit.AddRange(_paintableObjects);
         }
     }
 
@@ -80,16 +103,42 @@ public sealed class MultiMeshPainter : MonoBehaviour
         }
     }
 
-    private void PaintOverTargets()
+    private void FetchPaintableTargets()
     {
+        _paintableObjects.Clear();
+
         for (int i = 0; i < _actualCount; i++)
         {
             var target = _results[i].collider.gameObject;
 
             if (target.TryGetComponent<PaintableObject>(out var paintable))
             {
-                PaintTarget(paintable);
+                _paintableObjects.Add(paintable);
             }
+        }
+    }
+
+    private void RestorePreviousTargets()
+    {
+        _diff.Execute(_paintedObjectsWithoutCommit);
+
+        for (int i = 0; i < _diff.Removed.Count; i++)
+        {
+            var paintable = _diff.Removed[i];
+
+            var painter = _decalMap[paintable];
+
+            painter.Restore();
+        }
+    }
+
+    private void PaintOverTargets()
+    {
+        for (int i = 0; i < _paintableObjects.Count; i++)
+        {
+            var paintable = _paintableObjects[i];
+
+            PaintTarget(paintable);
         }
     }
 
@@ -114,7 +163,7 @@ public sealed class MultiMeshPainter : MonoBehaviour
             transformScale: targetTransform.lossyScale
         );
 
-        painter.Paint();
+        painter.Paint(_commitChanges);
     }
 
     private DecalPainter GetPainterForObject(PaintableObject target)

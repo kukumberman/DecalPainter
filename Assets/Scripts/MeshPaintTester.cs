@@ -88,7 +88,7 @@ public class MeshPaintTester : MonoBehaviour
             _decalDepthRenderer.SetCameraMatrices(_decalPainter.MappingMaterial);
 
             // 累積描画
-            _decalPainter.Paint();
+            _decalPainter.Paint(true);
 
 #if UNITY_EDITOR
             if (_pauseEditorOnPaint)

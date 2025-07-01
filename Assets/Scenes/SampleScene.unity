@@ -768,7 +768,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 434838718}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 82a72b9de992cf145a30759bf1cd79fc, type: 3}
   m_Name: 
@@ -817,6 +817,7 @@ MonoBehaviour:
   _decalProjector: {fileID: 1025727682}
   _maxDistance: 5
   _key: 323
+  _keepPaintingWhenKeyIsHeld: 0
 --- !u!1 &451847771
 GameObject:
   m_ObjectHideFlags: 0
@@ -1185,7 +1186,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1002540393}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: aae38a0162f44d046904ec9e6a24e09d, type: 3}
   m_Name: 
@@ -1731,7 +1732,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1621565188
 Transform:
   m_ObjectHideFlags: 0

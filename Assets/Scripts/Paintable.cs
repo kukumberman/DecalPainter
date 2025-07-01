@@ -68,7 +68,7 @@ public class Paintable : MonoBehaviour
             color: color,
             transformScale: transform.lossyScale
         );
-        _decalPainter.Paint();
+        _decalPainter.Paint(true);
     }
 
     void Awake()

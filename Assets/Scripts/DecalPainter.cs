@@ -60,6 +60,7 @@ public class DecalPainter : IDisposable
     static readonly int _objectScaleNameID = Shader.PropertyToID("_ObjectScale");
 
     private Texture texture;
+    private RenderTexture _accumulateTexture;
     private Material mappingMaterial;
 
     public Material MappingMaterial => mappingMaterial;
@@ -71,6 +72,8 @@ public class DecalPainter : IDisposable
     private Mesh _targetMesh;
     private Material _targetMeshMaterial;
     private Texture _baseTexture;
+
+    private bool _commitChanges;
 
     public DecalPainter(
         MeshFilter targetMeshFilter,
@@ -97,13 +100,16 @@ public class DecalPainter : IDisposable
         // 累積テクスチャ
         if (device == DecalPainterDevice.GPU)
         {
-            texture = new RenderTexture(
+            var desc = new RenderTextureDescriptor(
                 textureSize.x,
                 textureSize.y,
-                0,
                 RenderTextureFormat.ARGB32,
+                0,
                 0
             );
+
+            texture = new RenderTexture(desc);
+            _accumulateTexture = new RenderTexture(desc);
         }
         else if (device == DecalPainterDevice.CPU)
         {
@@ -137,7 +143,7 @@ public class DecalPainter : IDisposable
             return;
         }
         mappingMaterial = new Material(shader);
-        mappingMaterial.SetTexture(_accumulateTextureNameID, texture);
+        mappingMaterial.SetTexture(_accumulateTextureNameID, _accumulateTexture);
 
         var attribute = GetUvAttributeFromChannelIndex(props.UvChannelIndex);
         var hasUvAttribute = _targetMesh.HasVertexAttribute(attribute);
@@ -159,6 +165,11 @@ public class DecalPainter : IDisposable
         {
             Object.Destroy(texture);
             texture = null;
+        }
+        if (_accumulateTexture != null)
+        {
+            Object.Destroy(_accumulateTexture);
+            _accumulateTexture = null;
         }
         if (mappingMaterial != null)
         {
@@ -257,7 +268,7 @@ public class DecalPainter : IDisposable
 
     private void BakeTextureUsingGPU(Texture source)
     {
-        _command.Blit(source, texture);
+        _command.Blit(source, _accumulateTexture);
 
         Graphics.ExecuteCommandBuffer(_command);
 
@@ -288,11 +299,22 @@ public class DecalPainter : IDisposable
         mappingMaterial.SetVector(_objectScaleNameID, transformScale);
     }
 
+    public void Restore()
+    {
+        _command.Blit(_accumulateTexture, texture);
+
+        Graphics.ExecuteCommandBuffer(_command);
+
+        _command.Clear();
+    }
+
     /// <summary>
     /// texture(累積テクスチャ)に描画
     /// </summary>
-    public void Paint()
+    public void Paint(bool commitChanges)
     {
+        _commitChanges = commitChanges;
+
         s_MarkerPaint.Begin();
 
         if (texture is Texture2D)
@@ -332,7 +354,7 @@ public class DecalPainter : IDisposable
 
     private void PaintUsingGPU()
     {
-        var temporaryRenderTexture = RenderTexture.GetTemporary(texture.width, texture.height, 0);
+        var temporaryRenderTexture = RenderTexture.GetTemporary(_accumulateTexture.descriptor);
 
         // same as
         /*
@@ -347,6 +369,11 @@ public class DecalPainter : IDisposable
         _command.SetRenderTarget(temporaryRenderTexture);
         _command.DrawMesh(_targetMesh, matrix, mappingMaterial, 0, 0);
         _command.Blit(temporaryRenderTexture, texture);
+
+        if (_commitChanges)
+        {
+            _command.Blit(temporaryRenderTexture, _accumulateTexture);
+        }
 
         Graphics.ExecuteCommandBuffer(_command);
 
