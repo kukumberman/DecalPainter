@@ -6,9 +6,6 @@ public class MeshPaintTester : MonoBehaviour
     private DecalDepthRenderBehaviour _decalDepthRenderer;
 
     [SerializeField]
-    private DecalPainterDevice _deviceType;
-
-    [SerializeField]
     private DecalPainterProperties _props;
 
     [Header("Decal")]
@@ -44,12 +41,7 @@ public class MeshPaintTester : MonoBehaviour
         _targetMeshRenderer = _target.GetComponent<MeshRenderer>();
 
         // TargetMesh専用のデカール累積テクスチャを生成し、セットする
-        _decalPainter = new DecalPainter(
-            _targetMeshFilter,
-            _targetMeshRenderer,
-            _deviceType,
-            _props
-        );
+        _decalPainter = new DecalPainter(_targetMeshFilter, _targetMeshRenderer, _props);
         _decalPainter.BakeAndAssignBaseTexture();
 
         // デカール画像を設定する

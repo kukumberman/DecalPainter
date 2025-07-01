@@ -177,12 +177,7 @@ public sealed class MultiMeshPainter : MonoBehaviour
             var meshFilter = target.GetComponent<MeshFilter>();
             var meshRenderer = target.GetComponent<MeshRenderer>();
 
-            var painter = new DecalPainter(
-                meshFilter,
-                meshRenderer,
-                DecalPainterDevice.GPU,
-                target.Props
-            );
+            var painter = new DecalPainter(meshFilter, meshRenderer, target.Props);
 
             _decalMap.Add(target, painter);
 

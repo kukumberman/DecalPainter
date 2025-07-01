@@ -734,7 +734,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _decalDepthRenderer: {fileID: 434838722}
-  _deviceType: 2
   _props:
     SizeMode: 2
     OverridenTextureSize: {x: 2048, y: 2048}
