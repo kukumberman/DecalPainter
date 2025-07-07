@@ -60,32 +60,33 @@ public class DecalPainter : IDisposable
 
     private CommandBuffer _command;
     private IDecalPainterProps _props;
-    private MeshFilter _targetMeshFilter;
-    private MeshRenderer _targetMeshRenderer;
-    private Mesh _targetMesh;
+    private Renderer _targetRenderer;
     private Material _targetMeshMaterial;
     private Texture _baseTexture;
 
     private bool _commitChanges;
 
-    public DecalPainter(
-        MeshFilter targetMeshFilter,
-        MeshRenderer targetMeshRenderer,
-        IDecalPainterProps props
-    )
+    public DecalPainter(Renderer targetRenderer, IDecalPainterProps props)
     {
         _command = new CommandBuffer();
-        _targetMeshFilter = targetMeshFilter;
-        _targetMeshRenderer = targetMeshRenderer;
+        _targetRenderer = targetRenderer;
         _props = props;
 
+        Mesh mesh;
+        if (targetRenderer is MeshRenderer meshRenderer)
+        {
+            mesh = meshRenderer.GetComponent<MeshFilter>().sharedMesh;
+        }
+        else
+        {
+            throw new NotImplementedException();
+        }
+
         // TargetMeshのMaterialを複製して使う (参照先マテリアルを変更したくないのでInstantiateしたMaterialをSharedに入れて使う)
-        _targetMeshMaterial = _targetMeshRenderer.material;
-        _targetMeshRenderer.sharedMaterial = _targetMeshMaterial;
+        _targetMeshMaterial = _targetRenderer.material;
+        _targetRenderer.sharedMaterial = _targetMeshMaterial;
 
         _baseTexture = _targetMeshMaterial.GetTexture(_props.TexturePropertyName);
-
-        _targetMesh = targetMeshFilter.sharedMesh;
 
         var textureSize = CalculateBakeTextureDimensions();
 
@@ -112,14 +113,14 @@ public class DecalPainter : IDisposable
         mappingMaterial = new Material(shader);
         mappingMaterial.SetTexture(_accumulateTextureNameID, _accumulateTexture);
 
-        var attribute = GetUvAttributeFromChannelIndex(props.UvChannelIndex);
-        var hasUvAttribute = _targetMesh.HasVertexAttribute(attribute);
+        var attribute = GetUvAttributeFromChannelIndex(_props.UvChannelIndex);
+        var hasUvAttribute = mesh.HasVertexAttribute(attribute);
         if (!hasUvAttribute)
         {
             Debug.LogWarning("HasVertexAttribute is false");
         }
 
-        var keyword = string.Format("UV_CHANNEL_{0}", hasUvAttribute ? props.UvChannelIndex : 0);
+        var keyword = string.Format("UV_CHANNEL_{0}", hasUvAttribute ? _props.UvChannelIndex : 0);
         mappingMaterial.EnableKeyword(keyword);
     }
 
@@ -160,7 +161,7 @@ public class DecalPainter : IDisposable
 
     public void BakeAndAssignBaseTexture()
     {
-        BakeBaseTexture(_baseTexture);
+        BakeBaseTexture();
 
         _targetMeshMaterial.SetTexture(_props.TexturePropertyName, texture);
     }
@@ -193,18 +194,29 @@ public class DecalPainter : IDisposable
     /// <summary>
     /// texture(累積テクスチャ)に上書き描画をする
     /// </summary>
-    private void BakeBaseTexture(Texture source)
+    private void BakeBaseTexture()
     {
         s_MarkerBake.Begin();
 
-        BakeTextureUsingGPU(source);
+        BakeTextureUsingGPU();
 
         s_MarkerBake.End();
     }
 
-    private void BakeTextureUsingGPU(Texture source)
+    private void BakeTextureUsingGPU()
     {
-        _command.Blit(source, _accumulateTexture);
+        if (_baseTexture == null)
+        {
+            _command.SetRenderTarget(texture);
+            _command.ClearRenderTarget(true, true, Color.clear);
+            _command.SetRenderTarget(_accumulateTexture);
+            _command.ClearRenderTarget(true, true, Color.clear);
+        }
+        else
+        {
+            _command.Blit(_baseTexture, texture);
+            _command.Blit(_baseTexture, _accumulateTexture);
+        }
 
         Graphics.ExecuteCommandBuffer(_command);
 
@@ -262,19 +274,9 @@ public class DecalPainter : IDisposable
     {
         var temporaryRenderTexture = RenderTexture.GetTemporary(_accumulateTexture.descriptor);
 
-        // same as
-        /*
-         Matrix4x4.TRS(
-            _meshFilter.transform.position,
-            _meshFilter.transform.rotation,
-            _meshFilter.transform.lossyScale
-        )
-         */
-        var matrix = _targetMeshFilter.transform.localToWorldMatrix;
-
         _command.SetRenderTarget(temporaryRenderTexture);
         _command.ClearRenderTarget(true, true, Color.clear);
-        _command.DrawMesh(_targetMesh, matrix, mappingMaterial, 0, 0);
+        _command.DrawRenderer(_targetRenderer, mappingMaterial, 0, 0);
         _command.Blit(temporaryRenderTexture, texture);
 
         if (_commitChanges)

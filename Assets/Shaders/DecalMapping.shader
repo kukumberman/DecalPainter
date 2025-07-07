@@ -188,6 +188,12 @@ Shader "DecalMapping"
 				// return acc;
 			}
 
+			half4 SourceOver(half4 src, half4 dst)
+			{
+				half4 result = src * src.a + dst * (1 - src.a);
+				return result;
+			}
+
 			Varyings ProcessVertex(Attributes input)
 			{
 				UNITY_SETUP_INSTANCE_ID(v);
@@ -237,7 +243,7 @@ Shader "DecalMapping"
 				
 				// 4. UV座標のDecalTextureの色をフェッチするだけ
 				half4 decalColor = SAMPLE_TEXTURE2D(_DecalTexture, sampler_DecalTexture, TRANSFORM_TEX(uv, _DecalTexture));
-				decalColor.xyz *= _Color.xyz * decalColor.xyz * decalColor.w;
+				decalColor.xyz *= _Color.xyz;
 				//return stamp;
 				
 				
@@ -261,8 +267,7 @@ Shader "DecalMapping"
 					return acc;
 				}
 
-				half4 finalColor = half4(lerp(acc.xyz, decalColor.xyz, decalColor.w), acc.w);
-				// return finalColor;
+				half4 finalColor = SourceOver(decalColor, acc);
 				return DepthColorBlend(input, acc, finalColor, uv);
 			}
 			ENDHLSL

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.UI;
@@ -12,7 +13,7 @@ public sealed class DecalDepthRenderBehaviour : MonoBehaviour
     private int _textureSize = 2048;
 
     [SerializeField]
-    private List<Renderer> _renderers;
+    private List<GameObject> _gameObjects;
 
     [SerializeField]
     private RawImage _rawImage;
@@ -29,6 +30,8 @@ public sealed class DecalDepthRenderBehaviour : MonoBehaviour
     private Matrix4x4 _projectionMatrix;
 
     private OverrideRenderer _overrideRenderer;
+
+    private List<Renderer> _renderers;
 
     private void Start()
     {
@@ -54,6 +57,8 @@ public sealed class DecalDepthRenderBehaviour : MonoBehaviour
         {
             _rawImage.texture = _depthTexture;
         }
+
+        PopulateRenderers();
 
         _overrideRenderer = new OverrideRenderer(_renderers, _overrideMaterial);
     }
@@ -94,7 +99,7 @@ public sealed class DecalDepthRenderBehaviour : MonoBehaviour
         _command.Clear();
     }
 
-    public void SetDepthTexture(Material material)
+    public void SetDepthTextureFor(Material material)
     {
         material.SetTexture("_MyDepthTexture", _depthTexture, RenderTextureSubElement.Depth);
     }
@@ -102,6 +107,20 @@ public sealed class DecalDepthRenderBehaviour : MonoBehaviour
     public void SetCameraMatrices(Material material)
     {
         SetCameraMatrices(material, _viewMatrix, _projectionMatrix);
+    }
+
+    private void PopulateRenderers()
+    {
+        var allRenderers = new List<Renderer>();
+
+        for (int i = 0; i < _gameObjects.Count; i++)
+        {
+            _gameObjects[i].GetComponentsInChildren<Renderer>(allRenderers);
+        }
+
+        var hashSet = new HashSet<Renderer>(allRenderers);
+
+        _renderers = hashSet.ToList();
     }
 
     private static bool IsCameraProjectionMatrixFlipped()

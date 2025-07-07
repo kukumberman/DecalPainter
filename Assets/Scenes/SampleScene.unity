@@ -794,10 +794,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _decalProjector: {fileID: 1025727682}
   _textureSize: 512
-  _renderers:
-  - {fileID: 1587545474609245152}
-  - {fileID: 123144177}
-  - {fileID: 1377029954}
+  _gameObjects:
+  - {fileID: 753245115}
   _rawImage: {fileID: 810433843}
   _overrideShader: {fileID: 0}
 --- !u!114 &434838723
@@ -817,6 +815,7 @@ MonoBehaviour:
   _maxDistance: 5
   _key: 323
   _keepPaintingWhenKeyIsHeld: 0
+  _paintOnHover: 0
 --- !u!1 &451847771
 GameObject:
   m_ObjectHideFlags: 0
@@ -864,7 +863,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &471598356
 Transform:
   m_ObjectHideFlags: 0
@@ -1357,16 +1356,15 @@ PrefabInstance:
       propertyPath: m_Materials.Array.data[0]
       value: 
       objectReference: {fileID: 2100000, guid: e986069065cd1b0428527eb4f4928324, type: 2}
-    - target: {fileID: -5754084199372789682, guid: 919c693b6979f9b4daa8466f163b2bd0,
-        type: 3}
-      propertyPath: m_Mesh
-      value: 
-      objectReference: {fileID: 6142361046089812224, guid: 919c693b6979f9b4daa8466f163b2bd0,
-        type: 3}
     - target: {fileID: 919132149155446097, guid: 919c693b6979f9b4daa8466f163b2bd0,
         type: 3}
       propertyPath: m_Name
       value: rabbit_uv (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 919c693b6979f9b4daa8466f163b2bd0,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1492,12 +1490,6 @@ MeshCollider:
 --- !u!1 &1377029953 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 919c693b6979f9b4daa8466f163b2bd0,
-    type: 3}
-  m_PrefabInstance: {fileID: 34037815}
-  m_PrefabAsset: {fileID: 0}
---- !u!23 &1377029954 stripped
-MeshRenderer:
-  m_CorrespondingSourceObject: {fileID: -7511558181221131132, guid: 919c693b6979f9b4daa8466f163b2bd0,
     type: 3}
   m_PrefabInstance: {fileID: 34037815}
   m_PrefabAsset: {fileID: 0}

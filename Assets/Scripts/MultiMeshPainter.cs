@@ -19,6 +19,9 @@ public sealed class MultiMeshPainter : MonoBehaviour
     [SerializeField]
     private bool _keepPaintingWhenKeyIsHeld;
 
+    [SerializeField]
+    private bool _paintOnHover;
+
     private Transform _decalTransform;
     private Texture _decalTexture;
 
@@ -38,6 +41,11 @@ public sealed class MultiMeshPainter : MonoBehaviour
     {
         _decalTransform = _decalProjector.transform;
         _decalTexture = _decalProjector.GetComponent<MeshRenderer>().sharedMaterial.mainTexture;
+    }
+
+    private void Start()
+    {
+        CreatePainterPerExistingObject();
     }
 
     private void OnDestroy()
@@ -76,7 +84,7 @@ public sealed class MultiMeshPainter : MonoBehaviour
             _commitChanges = true;
             PaintOverTargets();
         }
-        else
+        else if (_paintOnHover)
         {
             _commitChanges = false;
             PaintOverTargets();
@@ -100,6 +108,16 @@ public sealed class MultiMeshPainter : MonoBehaviour
                 Gizmos.color = color;
                 Gizmos.DrawSphere(_results[i].point, 0.1f);
             }
+        }
+    }
+
+    private void CreatePainterPerExistingObject()
+    {
+        var objects = FindObjectsOfType<PaintableObject>();
+
+        foreach (var item in objects)
+        {
+            GetPainterForObject(item);
         }
     }
 
@@ -174,10 +192,9 @@ public sealed class MultiMeshPainter : MonoBehaviour
         }
         else
         {
-            var meshFilter = target.GetComponent<MeshFilter>();
-            var meshRenderer = target.GetComponent<MeshRenderer>();
+            var renderer = target.GetComponent<Renderer>();
 
-            var painter = new DecalPainter(meshFilter, meshRenderer, target.Props);
+            var painter = new DecalPainter(renderer, target.Props);
 
             _decalMap.Add(target, painter);
 
@@ -185,7 +202,7 @@ public sealed class MultiMeshPainter : MonoBehaviour
 
             painter.BakeAndAssignBaseTexture();
 
-            _decalDepthRenderer.SetDepthTexture(painter.MappingMaterial);
+            _decalDepthRenderer.SetDepthTextureFor(painter.MappingMaterial);
 
             return painter;
         }

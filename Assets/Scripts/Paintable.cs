@@ -35,7 +35,7 @@ public class Paintable : MonoBehaviour
             SizeMode = BakeTextureDimensionsMode.Default,
             TexturePropertyName = "_BaseMap"
         };
-        _decalPainter = new DecalPainter(_meshFilter, _meshRenderer, props);
+        _decalPainter = new DecalPainter(_meshRenderer, props);
         _decalPainter.BakeAndAssignBaseTexture();
 
         // ペイントテクスチャを設定

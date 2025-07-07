@@ -41,13 +41,13 @@ public class MeshPaintTester : MonoBehaviour
         _targetMeshRenderer = _target.GetComponent<MeshRenderer>();
 
         // TargetMesh専用のデカール累積テクスチャを生成し、セットする
-        _decalPainter = new DecalPainter(_targetMeshFilter, _targetMeshRenderer, _props);
+        _decalPainter = new DecalPainter(_targetMeshRenderer, _props);
         _decalPainter.BakeAndAssignBaseTexture();
 
         // デカール画像を設定する
         _decalPainter.SetDecalTexture(_decalPlane.sharedMaterial.mainTexture);
 
-        _decalDepthRenderer.SetDepthTexture(_decalPainter.MappingMaterial);
+        _decalDepthRenderer.SetDepthTextureFor(_decalPainter.MappingMaterial);
     }
 
     void OnDestroy()
